@@ -1,0 +1,47 @@
+groups:
+  - name: smartgrid_load_alerts
+    interval: 15s
+    rules:
+      # Алерт 1: Перевантаження району (> 500 кВт)
+      - alert: DistrictOverload
+        expr: smartgrid_district_power_kw > 500
+        for: 30s
+        labels:
+          severity: critical
+          system: smartgrid_lviv
+        annotations:
+          summary: "Критичне перевантаження району м. Львова"
+          description: "Район {{ $labels.district }} споживає {{ $value | printf \"%.2f\" }} кВт, що перевищує безпечний ліміт 500 кВт!"
+
+      # Алерт 2: Пікове споживання вище прогнозу (> 15%)
+      - alert: PeakConsumptionExceedsForecast
+        expr: ((smartgrid_district_power_kw - smartgrid_forecast_power_kw) / smartgrid_forecast_power_kw) * 100 > 15
+        for: 30s
+        labels:
+          severity: warning
+          system: smartgrid_lviv
+        annotations:
+          summary: "Споживання суттєво перевищує прогнозне значення"
+          description: "У районі {{ $labels.district }} фактичне споживання перевищує розрахований прогноз на {{ $value | printf \"%.1f\" }}% (>15%)!"
+
+      # Алерт 3: Критичний вузол мережі перевантажений (> 90%)
+      - alert: CriticalNodeOverloaded
+        expr: smartgrid_critical_node_load_percent > 90
+        for: 30s
+        labels:
+          severity: critical
+          system: smartgrid_lviv
+        annotations:
+          summary: "Перевантаження опорної підстанції ПС-110кВ"
+          description: "Трансформатор вузла {{ $labels.substation }} завантажений на {{ $value | printf \"%.1f\" }}% (>90%). Ризик спрацювання автоматичного захисту!"
+
+      # Алерт 4: Загроза аварійного відключення (Outage Risk > 0.8)
+      - alert: OutageRiskHigh
+        expr: smartgrid_outage_risk_index > 0.8
+        for: 15s
+        labels:
+          severity: critical
+          system: smartgrid_lviv
+        annotations:
+          summary: "Висока ймовірність віялового або аварійного знеструмлення"
+          description: "Індекс ризику в районі {{ $labels.district }} сягнув {{ $value | printf \"%.2f\" }} (норма < 0.5) через супутній дефіцит реактивної потужності!"
